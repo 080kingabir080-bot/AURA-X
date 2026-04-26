@@ -8,155 +8,167 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-
 body{
+margin:0;
 font-family:'Poppins',sans-serif;
-background:#050507;
+background:#0a0a0f;
 color:white;
-overflow-x:hidden;
 }
 
-/* 🔥 SPLASH SCREEN */
-.splash{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:radial-gradient(circle,#0f0f1a,#000);
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-z-index:999;
-animation:fadeOut 1s ease 3s forwards;
-}
-
-.logo{
-font-size:40px;
-letter-spacing:5px;
-background:linear-gradient(90deg,#00ffd5,#8a2eff);
--webkit-background-clip:text;
-color:transparent;
-animation:glow 2s infinite alternate;
-}
-
-@keyframes glow{
-from{text-shadow:0 0 10px #00ffd5}
-to{text-shadow:0 0 25px #8a2eff}
-}
-
-@keyframes fadeOut{
-to{opacity:0;visibility:hidden}
-}
-
-/* HEADER */
 header{
-padding:20px;
 text-align:center;
+padding:20px;
 font-size:22px;
-letter-spacing:3px;
-opacity:0;
-animation:fadeIn 1s ease 3.2s forwards;
+letter-spacing:2px;
+background:rgba(255,255,255,0.03);
 }
 
-/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-gap:15px;
-padding:20px;
-opacity:0;
-animation:fadeIn 1s ease 3.5s forwards;
+gap:12px;
+padding:15px;
 }
 
 .card{
-position:relative;
-padding:20px;
-border-radius:20px;
 background:rgba(255,255,255,0.05);
-backdrop-filter:blur(12px);
+padding:18px;
+border-radius:15px;
 cursor:pointer;
-overflow:hidden;
-transition:0.4s;
+transition:0.3s;
+text-align:center;
 }
 
 .card:hover{
-transform:translateY(-8px) scale(1.03);
-box-shadow:0 0 25px rgba(0,255,213,0.3);
+transform:scale(1.05);
+background:rgba(255,255,255,0.1);
 }
 
-/* glow overlay */
-.card::before{
-content:"";
-position:absolute;
-top:0;left:0;
-width:100%;height:100%;
-background:linear-gradient(120deg,transparent,#00ffd540,transparent);
-opacity:0;
-transition:0.4s;
+.song{
+padding:15px;
+border-bottom:1px solid #222;
+cursor:pointer;
 }
 
-.card:hover::before{
-opacity:1;
+.song:hover{
+background:#111;
 }
 
-.artist-name{
-font-size:18px;
-margin-bottom:5px;
+.player{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#000;
+padding:10px;
 }
 
-.verified{
-font-size:12px;
+iframe{
+width:100%;
+height:200px;
+border:none;
+}
+
+.hidden{display:none;}
+
+.back{
+padding:10px;
+cursor:pointer;
 color:#00ffd5;
-}
-
-.count{
-font-size:12px;
-opacity:0.7;
-}
-
-/* ANIMATION */
-@keyframes fadeIn{
-to{opacity:1}
 }
 </style>
 </head>
 
 <body>
 
-<!-- 🔥 Splash -->
-<div class="splash">
-<div class="logo">AURA</div>
-</div>
-
 <header>✨ AURA Studio</header>
 
-<div class="grid" id="artists"></div>
+<div id="artistsView" class="grid"></div>
 
-<script>
+<div id="songsView" class="hidden"></div>
 
-/* 🎵 DATA */
-const artists = [
-{name:"Travis Scott",songs:12,verified:true},
-{name:"Drake",songs:9,verified:true},
-{name:"Future",songs:7,verified:true},
-{name:"Metro Boomin",songs:5,verified:true},
-{name:"Don Toliver",songs:6,verified:true}
-];
+<div class="player">
+<iframe id="player"></iframe>
+</div>
 
-const container=document.getElementById("artists");
+<script type="module">
 
-/* 🎤 render */
-artists.forEach(a=>{
-const el=document.createElement("div");
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* 🔥 שלך */
+const firebaseConfig = {
+  apiKey: "AIzaSyBpGG9LatbshTkGjJoBZ7oOycPaK0oVfqE",
+  authDomain: "aura-x-9a67a.firebaseapp.com",
+  projectId: "aura-x-9a67a",
+  storageBucket: "aura-x-9a67a.firebasestorage.app",
+  messagingSenderId: "62129686970",
+  appId: "1:62129686970:web:eadfa4c379274135f5f583"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const artistsView = document.getElementById("artistsView");
+const songsView = document.getElementById("songsView");
+const player = document.getElementById("player");
+
+/* 🎤 טעינת אמנים */
+async function loadArtists(){
+const snap = await getDocs(collection(db,"artists"));
+
+artistsView.innerHTML="";
+
+snap.forEach(doc=>{
+const artist = doc.data();
+
+const el = document.createElement("div");
 el.className="card";
+
 el.innerHTML=`
-<div class="artist-name">${a.name}</div>
-<div class="verified">${a.verified?"✔️ VERIFIED":""}</div>
-<div class="count">${a.songs} tracks</div>
+<div>${artist.name}</div>
+<div style="color:#00ffd5;font-size:12px">
+${artist.verified ? "✔ מאומת" : ""}
+</div>
 `;
-container.appendChild(el);
+
+el.onclick = ()=>openArtist(doc.id, artist.name);
+
+artistsView.appendChild(el);
 });
+}
+
+/* 🎧 אמן → שירים */
+async function openArtist(id,name){
+
+artistsView.classList.add("hidden");
+songsView.classList.remove("hidden");
+
+songsView.innerHTML = `
+<div class="back" onclick="location.reload()">← חזרה</div>
+<h2 style="padding:10px">${name}</h2>
+`;
+
+/* שירים */
+const snap = await getDocs(collection(db,"artists",id,"songs"));
+
+snap.forEach(doc=>{
+const song = doc.data();
+
+const el = document.createElement("div");
+el.className="song";
+el.innerText = song.title;
+
+el.onclick = ()=>{
+player.src = song.youtube + "?autoplay=1";
+};
+
+songsView.appendChild(el);
+});
+}
+
+loadArtists();
 
 </script>
 
