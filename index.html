@@ -8,198 +8,155 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
 <style>
+*{margin:0;padding:0;box-sizing:border-box}
+
 body{
-margin:0;
 font-family:'Poppins',sans-serif;
-background:linear-gradient(135deg,#0a0a0f,#1c1c2e);
+background:#050507;
 color:white;
+overflow-x:hidden;
 }
 
+/* 🔥 SPLASH SCREEN */
+.splash{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:radial-gradient(circle,#0f0f1a,#000);
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+z-index:999;
+animation:fadeOut 1s ease 3s forwards;
+}
+
+.logo{
+font-size:40px;
+letter-spacing:5px;
+background:linear-gradient(90deg,#00ffd5,#8a2eff);
+-webkit-background-clip:text;
+color:transparent;
+animation:glow 2s infinite alternate;
+}
+
+@keyframes glow{
+from{text-shadow:0 0 10px #00ffd5}
+to{text-shadow:0 0 25px #8a2eff}
+}
+
+@keyframes fadeOut{
+to{opacity:0;visibility:hidden}
+}
+
+/* HEADER */
 header{
 padding:20px;
 text-align:center;
-font-size:26px;
-font-weight:700;
+font-size:22px;
 letter-spacing:3px;
+opacity:0;
+animation:fadeIn 1s ease 3.2s forwards;
 }
 
 /* GRID */
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-gap:12px;
-padding:15px;
+grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+gap:15px;
+padding:20px;
+opacity:0;
+animation:fadeIn 1s ease 3.5s forwards;
 }
 
 .card{
+position:relative;
+padding:20px;
+border-radius:20px;
 background:rgba(255,255,255,0.05);
-padding:15px;
-border-radius:18px;
+backdrop-filter:blur(12px);
 cursor:pointer;
-transition:0.3s;
-text-align:center;
+overflow:hidden;
+transition:0.4s;
 }
 
 .card:hover{
-transform:scale(1.05);
+transform:translateY(-8px) scale(1.03);
+box-shadow:0 0 25px rgba(0,255,213,0.3);
+}
+
+/* glow overlay */
+.card::before{
+content:"";
+position:absolute;
+top:0;left:0;
+width:100%;height:100%;
+background:linear-gradient(120deg,transparent,#00ffd540,transparent);
+opacity:0;
+transition:0.4s;
+}
+
+.card:hover::before{
+opacity:1;
+}
+
+.artist-name{
+font-size:18px;
+margin-bottom:5px;
 }
 
 .verified{
-color:#00ffd5;
 font-size:12px;
+color:#00ffd5;
 }
 
-/* SONG */
-.song{
-padding:15px;
-border-bottom:1px solid #222;
-cursor:pointer;
+.count{
+font-size:12px;
+opacity:0.7;
 }
 
-.song:hover{
-background:#111;
+/* ANIMATION */
+@keyframes fadeIn{
+to{opacity:1}
 }
-
-/* PLAYER */
-.player{
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-background:#000;
-padding:10px;
-}
-
-iframe{
-width:100%;
-height:200px;
-border:none;
-}
-
-/* ADMIN */
-.admin{
-position:fixed;
-top:10px;
-left:10px;
-background:#00ffd5;
-color:black;
-padding:8px;
-border-radius:10px;
-cursor:pointer;
-}
-
-/* HIDDEN */
-.hidden{display:none;}
 </style>
 </head>
 
 <body>
 
+<!-- 🔥 Splash -->
+<div class="splash">
+<div class="logo">AURA</div>
+</div>
+
 <header>✨ AURA Studio</header>
 
-<div class="admin" onclick="openAdmin()">⚙️</div>
-
-<div id="artistsView" class="grid"></div>
-
-<div id="songsView" class="hidden"></div>
-
-<div class="player">
-<iframe id="player"></iframe>
-</div>
+<div class="grid" id="artists"></div>
 
 <script>
 
-/* 🔐 סיסמה */
-const PASSWORD = "2004";
+/* 🎵 DATA */
+const artists = [
+{name:"Travis Scott",songs:12,verified:true},
+{name:"Drake",songs:9,verified:true},
+{name:"Future",songs:7,verified:true},
+{name:"Metro Boomin",songs:5,verified:true},
+{name:"Don Toliver",songs:6,verified:true}
+];
 
-/* 🎵 דאטה */
-let data = JSON.parse(localStorage.getItem("auraData")) || {
-artists:[
-{
-name:"Travis Scott",
-verified:true,
-songs:[
-{title:"FE!N",youtube:"https://www.youtube.com/embed/U-l4Ya3ejko?autoplay=1"},
-{title:"SICKO MODE",youtube:"https://www.youtube.com/embed/6ONRf7h3Mdk?autoplay=1"}
-]
-}
-]
-};
+const container=document.getElementById("artists");
 
-const artistsView = document.getElementById("artistsView");
-const songsView = document.getElementById("songsView");
-const player = document.getElementById("player");
-
-/* 🎤 הצגת אמנים */
-function renderArtists(){
-artistsView.innerHTML="";
-data.artists.forEach((artist,i)=>{
+/* 🎤 render */
+artists.forEach(a=>{
 const el=document.createElement("div");
 el.className="card";
 el.innerHTML=`
-<div>${artist.name}</div>
-<div class="verified">${artist.verified?"✔️ מאומת":""}</div>
-<div>${artist.songs.length} שירים</div>
+<div class="artist-name">${a.name}</div>
+<div class="verified">${a.verified?"✔️ VERIFIED":""}</div>
+<div class="count">${a.songs} tracks</div>
 `;
-el.onclick=()=>openArtist(i);
-artistsView.appendChild(el);
+container.appendChild(el);
 });
-}
-
-/* 🎶 פתיחת אמן */
-function openArtist(index){
-artistsView.classList.add("hidden");
-songsView.classList.remove("hidden");
-
-const artist=data.artists[index];
-
-songsView.innerHTML=`<h2 style="padding:10px">${artist.name}</h2>`;
-
-artist.songs.forEach(song=>{
-const el=document.createElement("div");
-el.className="song";
-el.innerText=song.title;
-el.onclick=()=>player.src=song.youtube;
-songsView.appendChild(el);
-});
-}
-
-/* 🔙 חזרה */
-function back(){
-songsView.classList.add("hidden");
-artistsView.classList.remove("hidden");
-}
-
-/* 🔐 פאנל ניהול */
-function openAdmin(){
-const pass=prompt("סיסמה:");
-if(pass!==PASSWORD) return alert("שגוי");
-
-const name=prompt("שם אמן:");
-if(!name) return;
-
-let artist=data.artists.find(a=>a.name===name);
-
-if(!artist){
-artist={name,verified:true,songs:[]};
-data.artists.push(artist);
-}
-
-const title=prompt("שם שיר:");
-const yt=prompt("קישור embed יוטיוב:");
-
-artist.songs.push({title,youtube:yt});
-
-localStorage.setItem("auraData",JSON.stringify(data));
-renderArtists();
-}
-
-/* 🎯 מומלצים */
-function recommended(){
-return data.artists.sort((a,b)=>b.songs.length-a.songs.length).slice(0,3);
-}
-
-renderArtists();
 
 </script>
 
