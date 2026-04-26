@@ -3,242 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AURA Studio</title>
+<title>AURA Studio v2</title>
 
 <style>
-
-/* =========================
-   🎨 GLOBAL UI SYSTEM
-========================= */
-
 body{
 margin:0;
-font-family:system-ui, Arial;
-background: radial-gradient(circle at top,#12121a,#050507);
+font-family:system-ui;
+background: radial-gradient(circle at top,#111,#050507);
 color:white;
-overflow-x:hidden;
 }
 
-/* HEADER */
 header{
 padding:18px;
 text-align:center;
-font-size:20px;
-letter-spacing:2px;
-font-weight:600;
-background:rgba(255,255,255,0.03);
+background:rgba(255,255,255,0.04);
 backdrop-filter: blur(10px);
-position:sticky;
-top:0;
+font-weight:600;
 }
 
-/* =========================
-   📱 LAYOUT SYSTEM
-========================= */
+.container{padding:15px;max-width:1000px;margin:auto}
 
-.container{
-padding:15px;
-max-width:1100px;
-margin:auto;
-}
-
-/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-gap:14px;
+gap:12px;
 }
-
-/* =========================
-   🧊 GLASS CARD UI
-========================= */
 
 .card{
 background:rgba(255,255,255,0.06);
-border:1px solid rgba(255,255,255,0.08);
-border-radius:18px;
-padding:18px;
+border-radius:16px;
+padding:15px;
 cursor:pointer;
-transition:0.25s ease;
-backdrop-filter: blur(12px);
-box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+transition:0.25s;
 }
 
 .card:hover{
-transform:translateY(-6px) scale(1.02);
-background:rgba(255,255,255,0.1);
+transform:translateY(-5px);
+background:rgba(255,255,255,0.12);
 }
 
-/* SONG ITEM */
 .song{
 padding:12px;
 margin:6px 0;
-border-radius:12px;
-background:rgba(255,255,255,0.04);
+border-radius:10px;
+background:rgba(255,255,255,0.05);
 cursor:pointer;
-transition:0.2s;
 }
 
-.song:hover{
-background:rgba(255,255,255,0.1);
+.song:hover{background:#222}
+
+input,button{
+padding:10px;
+border-radius:10px;
+border:none;
+margin:5px;
 }
 
-/* =========================
-   🎧 PLAYER BAR
-========================= */
+button{
+background:#00ffd5;
+cursor:pointer;
+font-weight:bold;
+}
 
 .player{
 position:fixed;
 bottom:0;
 left:0;
 right:0;
-background:rgba(0,0,0,0.8);
-backdrop-filter: blur(15px);
+background:#000;
 padding:10px;
-border-top:1px solid rgba(255,255,255,0.1);
 }
 
-iframe{
+#yt{
 width:100%;
 height:180px;
-border:none;
-border-radius:12px;
-}
-
-/* =========================
-   🔍 INPUTS
-========================= */
-
-input{
-width:100%;
-padding:12px;
 border-radius:12px;
 border:none;
-outline:none;
-margin-bottom:10px;
-background:rgba(255,255,255,0.05);
-color:white;
 }
-
-/* =========================
-   ✨ ANIMATION SYSTEM
-========================= */
-
-.fade{
-animation:fadeIn 0.4s ease;
-}
-
-@keyframes fadeIn{
-from{opacity:0;transform:translateY(10px);}
-to{opacity:1;transform:translateY(0);}
-}
-
-/* =========================
-   📱 MOBILE FIX
-========================= */
-
-@media(max-width:600px){
-.card{padding:14px}
-iframe{height:160px}
-}
-
 </style>
 </head>
 
 <body>
 
-<header>✨ AURA Studio</header>
+<header>🎧 AURA Studio v2</header>
 
 <div class="container">
 
-<!-- 🔍 SEARCH -->
-<input id="search" placeholder="חפש אמנים או שירים..." oninput="search()">
+<input id="search" placeholder="חיפוש..." oninput="search()">
 
-<!-- 🎤 ARTISTS -->
+<button onclick="adminMode()">Admin Add Song</button>
+
 <h3>אמנים</h3>
 <div id="artists" class="grid"></div>
 
-<!-- 🎧 EMBED LIBRARY (החלק החשוב שלך) -->
-<h3>📦 Library (הטמעות שירים)</h3>
+<h3>Library</h3>
 <div id="library"></div>
 
 </div>
 
-<!-- 🎧 PLAYER -->
 <div class="player">
-<iframe id="player"></iframe>
+<iframe id="yt"></iframe>
 </div>
 
 <script>
 
 /* =========================
-   📦 DATA SYSTEM
+   📦 CORE DB
 ========================= */
 
-let DB = JSON.parse(localStorage.getItem("aura_ui")) || {
+let DB = JSON.parse(localStorage.getItem("aura_v2")) || {
 artists:[
 {
 name:"Travis Scott",
 songs:[
-{
-title:"FE!N",
-embed:"https://www.youtube.com/embed/U-l4Ya3ejko"
-}
+{title:"FE!N",id:"U-l4Ya3ejko"}
 ]
 }
 ]
 };
 
 /* =========================
-   🎤 RENDER ARTISTS
+   🎤 RENDER
 ========================= */
 
-function renderArtists(){
+function render(){
 artists.innerHTML="";
 
 DB.artists.forEach(a=>{
-let div=document.createElement("div");
-div.className="card fade";
-div.innerHTML=`🎤 ${a.name}`;
+let d=document.createElement("div");
+d.className="card";
+d.innerHTML=a.name;
 
-div.onclick=()=>{
-openArtist(a);
-};
+d.onclick=()=>open(a);
 
-artists.appendChild(div);
+artists.appendChild(d);
 });
+renderLibrary();
 }
 
 /* =========================
    🎧 OPEN ARTIST
 ========================= */
 
-function openArtist(a){
+function open(a){
 artists.innerHTML="";
 
 a.songs.forEach(s=>{
-let div=document.createElement("div");
-div.className="song fade";
-div.innerHTML=`🎵 ${s.title}`;
+let d=document.createElement("div");
+d.className="song";
+d.innerHTML="🎵 "+s.title;
 
-div.onclick=()=>{
-play(s.embed);
-};
+d.onclick=()=>play(s.id);
 
-artists.appendChild(div);
+artists.appendChild(d);
 });
 }
 
 /* =========================
-   ▶ PLAY ENGINE
+   ▶ PLAY FIX (no broken iframe links)
 ========================= */
 
-function play(url){
-player.src=url+"?autoplay=1";
+function play(id){
+yt.src="https://www.youtube.com/embed/"+id+"?autoplay=1&rel=0";
 }
 
 /* =========================
-   🔍 SEARCH ENGINE
+   📦 LIBRARY
+========================= */
+
+function renderLibrary(){
+library.innerHTML="";
+
+DB.artists.forEach(a=>{
+a.songs.forEach(s=>{
+let d=document.createElement("div");
+d.className="song";
+d.innerHTML="🎧 "+s.title;
+
+d.onclick=()=>play(s.id);
+
+library.appendChild(d);
+});
+});
+}
+
+/* =========================
+   🔍 SEARCH
 ========================= */
 
 function search(){
@@ -248,57 +198,46 @@ artists.innerHTML="";
 
 DB.artists.forEach(a=>{
 if(a.name.toLowerCase().includes(q)){
-
-let div=document.createElement("div");
-div.className="card";
-div.innerHTML=a.name;
-
-div.onclick=()=>openArtist(a);
-
-artists.appendChild(div);
+let d=document.createElement("div");
+d.className="card";
+d.innerHTML=a.name;
+d.onclick=()=>open(a);
+artists.appendChild(d);
 }
 });
 }
 
 /* =========================
-   📦 EMBED LIBRARY VIEW
-   (זה המקום שאתה ביקשת)
+   🔐 ADMIN PANEL
 ========================= */
 
-function renderLibrary(){
-library.innerHTML="";
+function adminMode(){
+let pass=prompt("admin password");
+if(pass!=="2004")return alert("denied");
 
-DB.artists.forEach(a=>{
-a.songs.forEach(s=>{
+let artist=prompt("artist name");
+let title=prompt("song title");
+let id=prompt("YouTube VIDEO ID בלבד (לא לינק)");
 
-let box=document.createElement("div");
-box.className="song";
-box.innerHTML=`🎧 ${s.title}`;
+let found=DB.artists.find(a=>a.name===artist);
 
-box.onclick=()=>{
-play(s.embed);
-};
+if(!found){
+found={name:artist,songs:[]};
+DB.artists.push(found);
+}
 
-library.appendChild(box);
+found.songs.push({title,id});
 
-});
-});
+localStorage.setItem("aura_v2",JSON.stringify(DB));
+
+render();
 }
 
 /* =========================
-   💾 SAVE
+   INIT
 ========================= */
 
-function save(){
-localStorage.setItem("aura_ui",JSON.stringify(DB));
-}
-
-/* =========================
-   🚀 INIT
-========================= */
-
-renderArtists();
-renderLibrary();
+render();
 
 </script>
 
