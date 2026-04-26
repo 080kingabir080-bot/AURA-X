@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AURA Studio v3</title>
+<title>AURA Smart Music OS</title>
 
 <style>
 body{
@@ -16,39 +16,38 @@ overflow-x:hidden;
 
 /* HEADER */
 header{
-padding:18px;
+padding:16px;
 text-align:center;
-font-weight:600;
 background:rgba(255,255,255,0.03);
 backdrop-filter: blur(10px);
+font-weight:600;
 }
 
-/* VIEWS */
-.view{
-display:none;
+/* LAYOUT */
+.container{
+max-width:1100px;
+margin:auto;
 padding:15px;
 }
-.active{display:block}
 
-/* GRID */
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
 gap:12px;
 }
 
-/* CARD */
+/* CARDS */
 .card{
 background:rgba(255,255,255,0.06);
-border-radius:18px;
-padding:16px;
+border-radius:16px;
+padding:15px;
 cursor:pointer;
 transition:0.25s;
 border:1px solid rgba(255,255,255,0.05);
 }
 
 .card:hover{
-transform:scale(1.03);
+transform:translateY(-5px);
 background:rgba(255,255,255,0.12);
 }
 
@@ -56,7 +55,7 @@ background:rgba(255,255,255,0.12);
 .song{
 padding:12px;
 margin:6px 0;
-border-radius:12px;
+border-radius:10px;
 background:rgba(255,255,255,0.05);
 cursor:pointer;
 display:flex;
@@ -73,7 +72,7 @@ left:0;
 right:0;
 background:rgba(0,0,0,0.85);
 backdrop-filter: blur(12px);
-padding:12px;
+padding:10px;
 display:flex;
 flex-direction:column;
 gap:8px;
@@ -88,59 +87,87 @@ cursor:pointer;
 font-weight:bold;
 }
 
-.topbar{
+input{
+padding:10px;
+border-radius:10px;
+border:none;
+margin:5px 0;
+width:100%;
+}
+
+.hidden{display:none}
+
+.small{font-size:12px;opacity:0.7}
+
+.top{
 display:flex;
 justify-content:space-between;
 align-items:center;
 }
 
-.small{
-font-size:12px;
-opacity:0.7;
+/* LOGIN BOX */
+.loginBox{
+max-width:300px;
+margin:80px auto;
+padding:20px;
+background:rgba(255,255,255,0.05);
+border-radius:16px;
 }
 </style>
 </head>
 
 <body>
 
-<header>🎧 AURA Studio v3</header>
+<header>🎧 AURA Smart Music OS</header>
 
-<!-- HOME -->
-<div id="home" class="view active">
-<div class="grid" id="artists"></div>
+<!-- LOGIN -->
+<div id="loginBox" class="loginBox">
+<h3>Login / Register</h3>
+<input id="user" placeholder="username">
+<input id="pass" type="password" placeholder="password">
+<button onclick="login()">Login</button>
+<button onclick="register()">Register</button>
 </div>
 
-<!-- ARTIST -->
-<div id="artistView" class="view">
-<button onclick="back()">← חזרה</button>
-<h2 id="artistName"></h2>
-<div id="songs"></div>
+<!-- APP -->
+<div id="app" class="hidden container">
+
+<input id="search" placeholder="חיפוש..." oninput="search()">
+
+<h3>🎤 Artists</h3>
+<div id="artists" class="grid"></div>
+
+<h3>🧠 Recommended for you</h3>
+<div id="reco"></div>
+
+<h3>📜 History</h3>
+<div id="history"></div>
+
+<button onclick="adminMode()">Admin Panel</button>
+
 </div>
 
 <!-- PLAYER -->
 <div class="player">
-<div class="topbar">
-<div id="now">לא מנגן</div>
-<button onclick="toggle()">▶ / ⏸</button>
+<div class="top">
+<div id="now">Not playing</div>
+<button onclick="toggle()">▶/⏸</button>
 </div>
 
-<div class="small">AURA Player</div>
+<div class="small">Smart Queue Engine</div>
 
-<iframe id="yt"
-width="0"
-height="0"
-src=""
-allow="autoplay"
-></iframe>
+<iframe id="yt" width="0" height="0" allow="autoplay"></iframe>
 </div>
 
 <script>
 
 /* =========================
-   🎧 DATA
+   🧠 LOCAL DATABASE
 ========================= */
 
-let DB={
+let DB = JSON.parse(localStorage.getItem("aura_smart")) || {
+users:{},
+session:null,
 artists:[
 {
 name:"Travis Scott",
@@ -158,67 +185,214 @@ songs:[
 ]
 };
 
-let currentVideo=null;
+let queue=[];
+let current=null;
+let currentUser=null;
 
 /* =========================
-   🎤 HOME
+   🔐 AUTH SYSTEM
 ========================= */
 
-function renderArtists(){
+function save(){
+localStorage.setItem("aura_smart",JSON.stringify(DB));
+}
+
+function register(){
+let u=user.value;
+let p=pass.value;
+
+if(!u||!p)return;
+
+DB.users[u]={
+pass:btoa(p),
+history:[],
+stats:{plays:0}
+};
+
+save();
+alert("registered");
+}
+
+function login(){
+let u=user.value;
+let p=pass.value;
+
+if(DB.users[u] && DB.users[u].pass===btoa(p)){
+currentUser=u;
+DB.session=u;
+
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
+
+render();
+updateHistory();
+updateReco();
+}
+}
+
+/* =========================
+   🎤 RENDER ARTISTS
+========================= */
+
+function render(){
 artists.innerHTML="";
 
 DB.artists.forEach(a=>{
-let c=document.createElement("div");
-c.className="card";
-c.innerHTML="🎤 "+a.name;
+let d=document.createElement("div");
+d.className="card";
+d.innerHTML="🎤 "+a.name;
 
-c.onclick=()=>openArtist(a);
+d.onclick=()=>open(a);
 
-artists.appendChild(c);
+artists.appendChild(d);
 });
 }
 
 /* =========================
-   🎧 OPEN ARTIST
+   🎧 ARTIST VIEW + QUEUE
 ========================= */
 
-function openArtist(a){
-home.classList.remove("active");
-artistView.classList.add("active");
-
-artistName.innerText=a.name;
-
-songs.innerHTML="";
+function open(a){
+artists.innerHTML="";
 
 a.songs.forEach(s=>{
 let d=document.createElement("div");
 d.className="song";
-d.innerHTML=`🎵 ${s.title}`;
+d.innerHTML="🎵 "+s.title;
 
-d.onclick=()=>play(s);
+d.onclick=()=>{
+addToQueue(s);
+};
 
-songs.appendChild(d);
+artists.appendChild(d);
 });
 }
 
 /* =========================
-   ▶ PLAYER ENGINE (FIXED)
+   ▶ QUEUE SYSTEM
 ========================= */
 
-function play(song){
-currentVideo=song.id;
+function addToQueue(song){
+queue.push(song);
+if(!current) playNext();
+}
 
-yt.src="https://www.youtube.com/embed/"+song.id+"?autoplay=1";
+function playNext(){
+if(queue.length===0){
+now.innerText="Idle";
+return;
+}
 
-now.innerText="▶ "+song.title;
+current=queue.shift();
+
+yt.src="https://www.youtube.com/embed/"+current.id+"?autoplay=1";
+now.innerText="▶ "+current.title;
+
+trackHistory(current.title);
+updateReco();
 }
 
 /* =========================
-   ⏸ TOGGLE (fake control)
+   ⏭ AUTO PLAY
+========================= */
+
+yt.onended=playNext;
+
+/* =========================
+   📜 HISTORY + MEMORY
+========================= */
+
+function trackHistory(title){
+if(!currentUser)return;
+
+let u=DB.users[currentUser];
+
+u.history.push({
+t:title,
+time:Date.now()
+});
+
+u.stats.plays++;
+
+save();
+updateHistory();
+}
+
+/* =========================
+   📜 HISTORY VIEW
+========================= */
+
+function updateHistory(){
+history.innerHTML="";
+
+if(!DB.users[currentUser])return;
+
+DB.users[currentUser].history
+.slice(-7)
+.reverse()
+.forEach(h=>{
+let d=document.createElement("div");
+d.innerText="🎧 "+h.t;
+history.appendChild(d);
+});
+}
+
+/* =========================
+   🧠 SMART RECOMMENDATION ENGINE
+========================= */
+
+function updateReco(){
+reco.innerHTML="";
+
+if(!DB.users[currentUser])return;
+
+let history=DB.users[currentUser].history;
+
+let score={};
+
+history.forEach(h=>{
+DB.artists.forEach(a=>{
+a.songs.forEach(s=>{
+if(s.title.includes(h.t.split(" ")[0])){
+score[a.name]=(score[a.name]||0)+1;
+}
+});
+});
+});
+
+Object.keys(score).forEach(k=>{
+let d=document.createElement("div");
+d.innerHTML="🔥 Recommended: "+k;
+reco.appendChild(d);
+});
+}
+
+/* =========================
+   🔍 SEARCH
+========================= */
+
+function search(){
+let q=search.value.toLowerCase();
+
+artists.innerHTML="";
+
+DB.artists.forEach(a=>{
+if(a.name.toLowerCase().includes(q)){
+let d=document.createElement("div");
+d.className="card";
+d.innerHTML=a.name;
+d.onclick=()=>open(a);
+artists.appendChild(d);
+}
+});
+}
+
+/* =========================
+   ▶ PLAY CONTROL
 ========================= */
 
 function toggle(){
-if(!currentVideo)return;
+if(!current)return;
 
 if(yt.src.includes("autoplay=1")){
 yt.src=yt.src.replace("autoplay=1","");
@@ -228,19 +402,35 @@ yt.src+="?autoplay=1";
 }
 
 /* =========================
-   🔙 BACK
+   🔐 ADMIN MODE
 ========================= */
 
-function back(){
-artistView.classList.remove("active");
-home.classList.add("active");
+function adminMode(){
+let p=prompt("admin password");
+if(p!=="2004")return alert("denied");
+
+let artist=prompt("artist");
+let song=prompt("song");
+let id=prompt("youtube id");
+
+let found=DB.artists.find(a=>a.name===artist);
+
+if(!found){
+found={name:artist,songs:[]};
+DB.artists.push(found);
+}
+
+found.songs.push({title:song,id});
+
+save();
+render();
 }
 
 /* =========================
    INIT
 ========================= */
 
-renderArtists();
+render();
 
 </script>
 
