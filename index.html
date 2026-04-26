@@ -3,241 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AURA Studio v2</title>
+<title>AURA Studio v3</title>
 
 <style>
 body{
 margin:0;
 font-family:system-ui;
-background: radial-gradient(circle at top,#111,#050507);
+background: radial-gradient(circle at top,#141420,#050507);
 color:white;
+overflow-x:hidden;
 }
 
+/* HEADER */
 header{
 padding:18px;
 text-align:center;
-background:rgba(255,255,255,0.04);
-backdrop-filter: blur(10px);
 font-weight:600;
+background:rgba(255,255,255,0.03);
+backdrop-filter: blur(10px);
 }
 
-.container{padding:15px;max-width:1000px;margin:auto}
+/* VIEWS */
+.view{
+display:none;
+padding:15px;
+}
+.active{display:block}
 
+/* GRID */
 .grid{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
 gap:12px;
 }
 
+/* CARD */
 .card{
 background:rgba(255,255,255,0.06);
-border-radius:16px;
-padding:15px;
+border-radius:18px;
+padding:16px;
 cursor:pointer;
 transition:0.25s;
+border:1px solid rgba(255,255,255,0.05);
 }
 
 .card:hover{
-transform:translateY(-5px);
+transform:scale(1.03);
 background:rgba(255,255,255,0.12);
 }
 
+/* SONG */
 .song{
 padding:12px;
 margin:6px 0;
-border-radius:10px;
+border-radius:12px;
 background:rgba(255,255,255,0.05);
 cursor:pointer;
+display:flex;
+justify-content:space-between;
 }
 
 .song:hover{background:#222}
 
-input,button{
-padding:10px;
-border-radius:10px;
-border:none;
-margin:5px;
-}
-
-button{
-background:#00ffd5;
-cursor:pointer;
-font-weight:bold;
-}
-
+/* PLAYER */
 .player{
 position:fixed;
 bottom:0;
 left:0;
 right:0;
-background:#000;
-padding:10px;
+background:rgba(0,0,0,0.85);
+backdrop-filter: blur(12px);
+padding:12px;
+display:flex;
+flex-direction:column;
+gap:8px;
 }
 
-#yt{
-width:100%;
-height:180px;
-border-radius:12px;
+button{
+background:#00ffd5;
 border:none;
+padding:10px;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.small{
+font-size:12px;
+opacity:0.7;
 }
 </style>
 </head>
 
 <body>
 
-<header>🎧 AURA Studio v2</header>
+<header>🎧 AURA Studio v3</header>
 
-<div class="container">
-
-<input id="search" placeholder="חיפוש..." oninput="search()">
-
-<button onclick="adminMode()">Admin Add Song</button>
-
-<h3>אמנים</h3>
-<div id="artists" class="grid"></div>
-
-<h3>Library</h3>
-<div id="library"></div>
-
+<!-- HOME -->
+<div id="home" class="view active">
+<div class="grid" id="artists"></div>
 </div>
 
+<!-- ARTIST -->
+<div id="artistView" class="view">
+<button onclick="back()">← חזרה</button>
+<h2 id="artistName"></h2>
+<div id="songs"></div>
+</div>
+
+<!-- PLAYER -->
 <div class="player">
-<iframe id="yt"></iframe>
+<div class="topbar">
+<div id="now">לא מנגן</div>
+<button onclick="toggle()">▶ / ⏸</button>
+</div>
+
+<div class="small">AURA Player</div>
+
+<iframe id="yt"
+width="0"
+height="0"
+src=""
+allow="autoplay"
+></iframe>
 </div>
 
 <script>
 
 /* =========================
-   📦 CORE DB
+   🎧 DATA
 ========================= */
 
-let DB = JSON.parse(localStorage.getItem("aura_v2")) || {
+let DB={
 artists:[
 {
 name:"Travis Scott",
 songs:[
-{title:"FE!N",id:"U-l4Ya3ejko"}
+{title:"FE!N",id:"U-l4Ya3ejko"},
+{title:"SICKO MODE",id:"6ONRf7h3Mdk"}
+]
+},
+{
+name:"Drake",
+songs:[
+{title:"God's Plan",id:"xpVfcZ0ZcFM"}
 ]
 }
 ]
 };
 
+let currentVideo=null;
+
 /* =========================
-   🎤 RENDER
+   🎤 HOME
 ========================= */
 
-function render(){
+function renderArtists(){
 artists.innerHTML="";
 
 DB.artists.forEach(a=>{
-let d=document.createElement("div");
-d.className="card";
-d.innerHTML=a.name;
+let c=document.createElement("div");
+c.className="card";
+c.innerHTML="🎤 "+a.name;
 
-d.onclick=()=>open(a);
+c.onclick=()=>openArtist(a);
 
-artists.appendChild(d);
+artists.appendChild(c);
 });
-renderLibrary();
 }
 
 /* =========================
    🎧 OPEN ARTIST
 ========================= */
 
-function open(a){
-artists.innerHTML="";
+function openArtist(a){
+home.classList.remove("active");
+artistView.classList.add("active");
+
+artistName.innerText=a.name;
+
+songs.innerHTML="";
 
 a.songs.forEach(s=>{
 let d=document.createElement("div");
 d.className="song";
-d.innerHTML="🎵 "+s.title;
+d.innerHTML=`🎵 ${s.title}`;
 
-d.onclick=()=>play(s.id);
+d.onclick=()=>play(s);
 
-artists.appendChild(d);
+songs.appendChild(d);
 });
 }
 
 /* =========================
-   ▶ PLAY FIX (no broken iframe links)
+   ▶ PLAYER ENGINE (FIXED)
 ========================= */
 
-function play(id){
-yt.src="https://www.youtube.com/embed/"+id+"?autoplay=1&rel=0";
+function play(song){
+currentVideo=song.id;
+
+yt.src="https://www.youtube.com/embed/"+song.id+"?autoplay=1";
+
+now.innerText="▶ "+song.title;
 }
 
 /* =========================
-   📦 LIBRARY
+   ⏸ TOGGLE (fake control)
 ========================= */
 
-function renderLibrary(){
-library.innerHTML="";
+function toggle(){
+if(!currentVideo)return;
 
-DB.artists.forEach(a=>{
-a.songs.forEach(s=>{
-let d=document.createElement("div");
-d.className="song";
-d.innerHTML="🎧 "+s.title;
-
-d.onclick=()=>play(s.id);
-
-library.appendChild(d);
-});
-});
+if(yt.src.includes("autoplay=1")){
+yt.src=yt.src.replace("autoplay=1","");
+}else{
+yt.src+="?autoplay=1";
+}
 }
 
 /* =========================
-   🔍 SEARCH
+   🔙 BACK
 ========================= */
 
-function search(){
-let q=search.value.toLowerCase();
-
-artists.innerHTML="";
-
-DB.artists.forEach(a=>{
-if(a.name.toLowerCase().includes(q)){
-let d=document.createElement("div");
-d.className="card";
-d.innerHTML=a.name;
-d.onclick=()=>open(a);
-artists.appendChild(d);
-}
-});
-}
-
-/* =========================
-   🔐 ADMIN PANEL
-========================= */
-
-function adminMode(){
-let pass=prompt("admin password");
-if(pass!=="2004")return alert("denied");
-
-let artist=prompt("artist name");
-let title=prompt("song title");
-let id=prompt("YouTube VIDEO ID בלבד (לא לינק)");
-
-let found=DB.artists.find(a=>a.name===artist);
-
-if(!found){
-found={name:artist,songs:[]};
-DB.artists.push(found);
-}
-
-found.songs.push({title,id});
-
-localStorage.setItem("aura_v2",JSON.stringify(DB));
-
-render();
+function back(){
+artistView.classList.remove("active");
+home.classList.add("active");
 }
 
 /* =========================
    INIT
 ========================= */
 
-render();
+renderArtists();
 
 </script>
 
