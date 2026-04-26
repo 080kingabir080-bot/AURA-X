@@ -5,22 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AURA Studio</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-
 <style>
 body{
 margin:0;
-font-family:'Poppins',sans-serif;
+font-family:Arial;
 background:#0a0a0f;
 color:white;
 }
 
 header{
-text-align:center;
 padding:20px;
+text-align:center;
 font-size:22px;
-letter-spacing:2px;
-background:rgba(255,255,255,0.03);
 }
 
 .grid{
@@ -32,27 +28,21 @@ padding:15px;
 
 .card{
 background:rgba(255,255,255,0.05);
-padding:18px;
-border-radius:15px;
+padding:15px;
+border-radius:12px;
 cursor:pointer;
-transition:0.3s;
 text-align:center;
 }
 
-.card:hover{
-transform:scale(1.05);
-background:rgba(255,255,255,0.1);
-}
+.card:hover{background:#222}
 
 .song{
-padding:15px;
+padding:12px;
 border-bottom:1px solid #222;
 cursor:pointer;
 }
 
-.song:hover{
-background:#111;
-}
+.song:hover{background:#111}
 
 .player{
 position:fixed;
@@ -69,19 +59,27 @@ height:200px;
 border:none;
 }
 
-.hidden{display:none;}
+.hidden{display:none}
 
-.back{
-padding:10px;
+.adminBtn{
+position:fixed;
+top:10px;
+left:10px;
+background:#00ffd5;
+color:black;
+padding:8px;
+border-radius:8px;
 cursor:pointer;
-color:#00ffd5;
+font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<header>✨ AURA Studio</header>
+<div class="adminBtn" onclick="adminLogin()">ADMIN</div>
+
+<header>🎧 AURA Studio</header>
 
 <div id="artistsView" class="grid"></div>
 
@@ -91,84 +89,102 @@ color:#00ffd5;
 <iframe id="player"></iframe>
 </div>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+/* 🔐 סיסמה לפאנל */
+const PASSWORD = "2004";
 
-/* 🔥 שלך */
-const firebaseConfig = {
-  apiKey: "AIzaSyBpGG9LatbshTkGjJoBZ7oOycPaK0oVfqE",
-  authDomain: "aura-x-9a67a.firebaseapp.com",
-  projectId: "aura-x-9a67a",
-  storageBucket: "aura-x-9a67a.firebasestorage.app",
-  messagingSenderId: "62129686970",
-  appId: "1:62129686970:web:eadfa4c379274135f5f583"
+/* 💾 דאטה מקומי */
+let data = JSON.parse(localStorage.getItem("aura")) || {
+artists:[]
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 const artistsView = document.getElementById("artistsView");
 const songsView = document.getElementById("songsView");
 const player = document.getElementById("player");
 
-/* 🎤 טעינת אמנים */
-async function loadArtists(){
-const snap = await getDocs(collection(db,"artists"));
-
+/* 🎤 הצגת אמנים */
+function renderArtists(){
 artistsView.innerHTML="";
 
-snap.forEach(doc=>{
-const artist = doc.data();
-
-const el = document.createElement("div");
+data.artists.forEach((a,i)=>{
+const el=document.createElement("div");
 el.className="card";
-
 el.innerHTML=`
-<div>${artist.name}</div>
-<div style="color:#00ffd5;font-size:12px">
-${artist.verified ? "✔ מאומת" : ""}
-</div>
+<div>${a.name}</div>
+<div>${a.songs.length} שירים</div>
 `;
 
-el.onclick = ()=>openArtist(doc.id, artist.name);
-
+el.onclick=()=>openArtist(i);
 artistsView.appendChild(el);
 });
 }
 
-/* 🎧 אמן → שירים */
-async function openArtist(id,name){
+/* 🎧 אמן */
+function openArtist(index){
 
 artistsView.classList.add("hidden");
 songsView.classList.remove("hidden");
 
-songsView.innerHTML = `
-<div class="back" onclick="location.reload()">← חזרה</div>
-<h2 style="padding:10px">${name}</h2>
+const artist=data.artists[index];
+
+songsView.innerHTML=`
+<div onclick="back()" style="padding:10px;color:#00ffd5;cursor:pointer">← חזרה</div>
+<h2 style="padding:10px">${artist.name}</h2>
 `;
 
-/* שירים */
-const snap = await getDocs(collection(db,"artists",id,"songs"));
-
-snap.forEach(doc=>{
-const song = doc.data();
-
-const el = document.createElement("div");
+artist.songs.forEach(song=>{
+const el=document.createElement("div");
 el.className="song";
-el.innerText = song.title;
+el.innerText=song.title;
 
-el.onclick = ()=>{
-player.src = song.youtube + "?autoplay=1";
+el.onclick=()=>{
+player.src=song.youtube + "?autoplay=1";
 };
 
 songsView.appendChild(el);
 });
 }
 
-loadArtists();
+/* 🔙 חזרה */
+function back(){
+songsView.classList.add("hidden");
+artistsView.classList.remove("hidden");
+}
+
+/* 🔐 פאנל ניהול */
+function adminLogin(){
+
+const pass=prompt("סיסמה:");
+if(pass!==PASSWORD){
+alert("שגוי");
+return;
+}
+
+const name=prompt("שם אמן:");
+
+let artist = data.artists.find(a=>a.name===name);
+
+if(!artist){
+artist = {name:name,songs:[]};
+data.artists.push(artist);
+}
+
+const title=prompt("שם שיר:");
+
+const youtube=prompt("YouTube embed link:");
+
+artist.songs.push({
+title,
+youtube
+});
+
+localStorage.setItem("aura",JSON.stringify(data));
+
+renderArtists();
+}
+
+renderArtists();
 
 </script>
 
