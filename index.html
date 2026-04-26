@@ -7,86 +7,89 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
-<meta name="theme-color" content="#0f0f0f">
-
 <style>
-*{box-sizing:border-box}
-
 body{
-    margin:0;
-    font-family:'Poppins',sans-serif;
-    background: radial-gradient(circle at top,#1f1f2e,#0a0a0f);
-    color:white;
+margin:0;
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#0a0a0f,#1c1c2e);
+color:white;
 }
 
-/* HEADER */
 header{
-    padding:20px;
-    text-align:center;
-    font-size:26px;
-    font-weight:700;
-    letter-spacing:3px;
-    background:rgba(255,255,255,0.03);
-    backdrop-filter:blur(10px);
+padding:20px;
+text-align:center;
+font-size:26px;
+font-weight:700;
+letter-spacing:3px;
 }
 
-/* SONG LIST */
-.container{
-    padding:15px;
-    padding-bottom:120px;
+/* GRID */
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+gap:12px;
+padding:15px;
 }
 
+.card{
+background:rgba(255,255,255,0.05);
+padding:15px;
+border-radius:18px;
+cursor:pointer;
+transition:0.3s;
+text-align:center;
+}
+
+.card:hover{
+transform:scale(1.05);
+}
+
+.verified{
+color:#00ffd5;
+font-size:12px;
+}
+
+/* SONG */
 .song{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:15px;
-    margin-bottom:12px;
-    border-radius:18px;
-    background:rgba(255,255,255,0.05);
-    backdrop-filter:blur(10px);
-    cursor:pointer;
-    transition:0.3s;
+padding:15px;
+border-bottom:1px solid #222;
+cursor:pointer;
 }
 
 .song:hover{
-    transform:scale(1.02);
-    background:rgba(255,255,255,0.08);
-}
-
-.song.playing{
-    border:1px solid #00ffd5;
-    color:#00ffd5;
+background:#111;
 }
 
 /* PLAYER */
 .player{
-    position:fixed;
-    bottom:0;
-    left:0;
-    right:0;
-    background:rgba(10,10,15,0.95);
-    backdrop-filter:blur(15px);
-    border-top:1px solid #222;
-    padding:10px;
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#000;
+padding:10px;
 }
 
 iframe{
-    width:100%;
-    height:200px;
-    border:none;
-    border-radius:12px;
+width:100%;
+height:200px;
+border:none;
 }
 
-/* ANIMATION */
-.song{
-    animation:fadeIn 0.5s ease;
+/* ADMIN */
+.admin{
+position:fixed;
+top:10px;
+left:10px;
+background:#00ffd5;
+color:black;
+padding:8px;
+border-radius:10px;
+cursor:pointer;
 }
 
-@keyframes fadeIn{
-    from{opacity:0; transform:translateY(10px)}
-    to{opacity:1; transform:translateY(0)}
-}
+/* HIDDEN */
+.hidden{display:none;}
 </style>
 </head>
 
@@ -94,95 +97,110 @@ iframe{
 
 <header>✨ AURA Studio</header>
 
-<div class="container" id="songList"></div>
+<div class="admin" onclick="openAdmin()">⚙️</div>
+
+<div id="artistsView" class="grid"></div>
+
+<div id="songsView" class="hidden"></div>
 
 <div class="player">
-    <iframe id="player"></iframe>
+<iframe id="player"></iframe>
 </div>
 
 <script>
-/* 🎵 ניהול שירים */
-const songs = [
-{
-title:"Travis Scott - FE!N",
-artist:"Travis Scott",
-youtube:"https://www.youtube.com/embed/U-l4Ya3ejko?autoplay=1"
-},
-{
-title:"Drake - God's Plan",
-artist:"Drake",
-youtube:"https://www.youtube.com/embed/xpVfcZ0ZcFM?autoplay=1"
-}
-];
 
-const list = document.getElementById("songList");
+/* 🔐 סיסמה */
+const PASSWORD = "2004";
+
+/* 🎵 דאטה */
+let data = JSON.parse(localStorage.getItem("auraData")) || {
+artists:[
+{
+name:"Travis Scott",
+verified:true,
+songs:[
+{title:"FE!N",youtube:"https://www.youtube.com/embed/U-l4Ya3ejko?autoplay=1"},
+{title:"SICKO MODE",youtube:"https://www.youtube.com/embed/6ONRf7h3Mdk?autoplay=1"}
+]
+}
+]
+};
+
+const artistsView = document.getElementById("artistsView");
+const songsView = document.getElementById("songsView");
 const player = document.getElementById("player");
 
-let currentIndex = 0;
+/* 🎤 הצגת אמנים */
+function renderArtists(){
+artistsView.innerHTML="";
+data.artists.forEach((artist,i)=>{
+const el=document.createElement("div");
+el.className="card";
+el.innerHTML=`
+<div>${artist.name}</div>
+<div class="verified">${artist.verified?"✔️ מאומת":""}</div>
+<div>${artist.songs.length} שירים</div>
+`;
+el.onclick=()=>openArtist(i);
+artistsView.appendChild(el);
+});
+}
 
-/* 🎧 רינדור */
-function renderSongs(){
-list.innerHTML="";
-songs.forEach((song,index)=>{
+/* 🎶 פתיחת אמן */
+function openArtist(index){
+artistsView.classList.add("hidden");
+songsView.classList.remove("hidden");
+
+const artist=data.artists[index];
+
+songsView.innerHTML=`<h2 style="padding:10px">${artist.name}</h2>`;
+
+artist.songs.forEach(song=>{
 const el=document.createElement("div");
 el.className="song";
-el.innerHTML=`
-<div>
-<div>${song.title}</div>
-<small>${song.artist}</small>
-</div>
-▶
-`;
-el.onclick=()=>playSong(index,el);
-list.appendChild(el);
+el.innerText=song.title;
+el.onclick=()=>player.src=song.youtube;
+songsView.appendChild(el);
 });
 }
 
-/* ▶ ניגון */
-function playSong(index,element){
-currentIndex=index;
-player.src=songs[index].youtube;
-
-document.querySelectorAll(".song").forEach(s=>s.classList.remove("playing"));
-element.classList.add("playing");
-
-setMediaSession(songs[index]);
+/* 🔙 חזרה */
+function back(){
+songsView.classList.add("hidden");
+artistsView.classList.remove("hidden");
 }
 
-/* 📱 שליטה במסך נעילה */
-function setMediaSession(song){
-if('mediaSession' in navigator){
-navigator.mediaSession.metadata = new MediaMetadata({
-title: song.title,
-artist: song.artist,
-album: "AURA Studio"
-});
+/* 🔐 פאנל ניהול */
+function openAdmin(){
+const pass=prompt("סיסמה:");
+if(pass!==PASSWORD) return alert("שגוי");
 
-navigator.mediaSession.setActionHandler('play',()=>{});
-navigator.mediaSession.setActionHandler('pause',()=>{player.src=""});
-navigator.mediaSession.setActionHandler('previoustrack',()=>prev());
-navigator.mediaSession.setActionHandler('nexttrack',()=>next());
-}
-}
+const name=prompt("שם אמן:");
+if(!name) return;
 
-function next(){
-currentIndex=(currentIndex+1)%songs.length;
-renderSongs();
-playSong(currentIndex,document.querySelectorAll(".song")[currentIndex]);
+let artist=data.artists.find(a=>a.name===name);
+
+if(!artist){
+artist={name,verified:true,songs:[]};
+data.artists.push(artist);
 }
 
-function prev(){
-currentIndex=(currentIndex-1+songs.length)%songs.length;
-renderSongs();
-playSong(currentIndex,document.querySelectorAll(".song")[currentIndex]);
+const title=prompt("שם שיר:");
+const yt=prompt("קישור embed יוטיוב:");
+
+artist.songs.push({title,youtube:yt});
+
+localStorage.setItem("auraData",JSON.stringify(data));
+renderArtists();
 }
 
-renderSongs();
-
-/* 🔥 PWA */
-if('serviceWorker' in navigator){
-navigator.serviceWorker.register('sw.js');
+/* 🎯 מומלצים */
+function recommended(){
+return data.artists.sort((a,b)=>b.songs.length-a.songs.length).slice(0,3);
 }
+
+renderArtists();
+
 </script>
 
 </body>
