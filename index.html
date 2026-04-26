@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AURA Studio</title>
+<title>AURA ULTRA</title>
 
 <style>
 body{
@@ -14,35 +14,48 @@ color:white;
 }
 
 header{
-padding:20px;
+padding:18px;
 text-align:center;
 font-size:22px;
+background:#111;
+letter-spacing:2px;
 }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-gap:12px;
-padding:15px;
+.container{padding:15px}
+
+input,button{
+padding:10px;
+margin:5px;
+border-radius:8px;
+border:none;
+}
+
+button{
+cursor:pointer;
+background:#00ffd5;
+color:black;
+font-weight:bold;
 }
 
 .card{
 background:rgba(255,255,255,0.05);
-padding:15px;
-border-radius:12px;
+padding:12px;
+margin:10px 0;
+border-radius:10px;
 cursor:pointer;
-text-align:center;
 }
 
 .card:hover{background:#222}
 
 .song{
-padding:12px;
+padding:10px;
 border-bottom:1px solid #222;
 cursor:pointer;
 }
 
 .song:hover{background:#111}
+
+.hidden{display:none}
 
 .player{
 position:fixed;
@@ -55,35 +68,41 @@ padding:10px;
 
 iframe{
 width:100%;
-height:200px;
+height:180px;
 border:none;
-}
-
-.hidden{display:none}
-
-.adminBtn{
-position:fixed;
-top:10px;
-left:10px;
-background:#00ffd5;
-color:black;
-padding:8px;
-border-radius:8px;
-cursor:pointer;
-font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="adminBtn" onclick="adminLogin()">ADMIN</div>
+<header>🔐 AURA ULTRA SECURE</header>
 
-<header>🎧 AURA Studio</header>
+<div class="container">
 
-<div id="artistsView" class="grid"></div>
+<!-- LOGIN -->
+<div id="loginBox">
+<h3>כניסה למערכת</h3>
+<input id="user" placeholder="שם משתמש"><br>
+<input id="pass" type="password" placeholder="סיסמה"><br>
+<button onclick="login()">כניסה</button>
+<button onclick="register()">הרשמה</button>
+</div>
 
-<div id="songsView" class="hidden"></div>
+<!-- APP -->
+<div id="app" class="hidden">
+
+<h3>אמנים</h3>
+<div id="artists"></div>
+
+<h3>היסטוריה</h3>
+<div id="history"></div>
+
+<button onclick="adminMode()">ADMIN MODE</button>
+
+</div>
+
+</div>
 
 <div class="player">
 <iframe id="player"></iframe>
@@ -91,100 +110,170 @@ font-weight:bold;
 
 <script>
 
-/* 🔐 סיסמה לפאנל */
-const PASSWORD = "2004";
+/* =========================
+   🧠 LOCAL DATABASE
+========================= */
 
-/* 💾 דאטה מקומי */
-let data = JSON.parse(localStorage.getItem("aura")) || {
-artists:[]
+let DB = JSON.parse(localStorage.getItem("aura_ultra_db")) || {
+users:{},
+artists:[
+{name:"Travis Scott",songs:[
+{t:"FE!N",v:"https://www.youtube.com/embed/U-l4Ya3ejko"}
+]}
+]
 };
 
-const artistsView = document.getElementById("artistsView");
-const songsView = document.getElementById("songsView");
-const player = document.getElementById("player");
+/* =========================
+   🔐 SESSION
+========================= */
 
-/* 🎤 הצגת אמנים */
+let sessionUser = null;
+
+/* =========================
+   🔐 SIMPLE HASH (obfuscation)
+========================= */
+
+function hash(str){
+let h=0;
+for(let i=0;i<str.length;i++){
+h=(h<<5)-h+str.charCodeAt(i);
+h|=0;
+}
+return h;
+}
+
+/* =========================
+   REGISTER
+========================= */
+
+function register(){
+let u=user.value;
+let p=pass.value;
+
+if(!u||!p)return;
+
+DB.users[u]={
+pass:hash(p),
+history:[],
+likes:[]
+};
+
+save();
+alert("נרשם!");
+}
+
+/* =========================
+   LOGIN
+========================= */
+
+function login(){
+let u=user.value;
+let p=pass.value;
+
+if(DB.users[u] && DB.users[u].pass===hash(p)){
+sessionUser=u;
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
+renderArtists();
+renderHistory();
+}else{
+alert("שגיאה");
+}
+}
+
+/* =========================
+   SAVE
+========================= */
+
+function save(){
+localStorage.setItem("aura_ultra_db",JSON.stringify(DB));
+}
+
+/* =========================
+   ARTISTS
+========================= */
+
 function renderArtists(){
-artistsView.innerHTML="";
+artists.innerHTML="";
 
-data.artists.forEach((a,i)=>{
-const el=document.createElement("div");
-el.className="card";
-el.innerHTML=`
-<div>${a.name}</div>
-<div>${a.songs.length} שירים</div>
-`;
+DB.artists.forEach(a=>{
+let div=document.createElement("div");
+div.className="card";
+div.innerHTML=a.name;
 
-el.onclick=()=>openArtist(i);
-artistsView.appendChild(el);
-});
-}
-
-/* 🎧 אמן */
-function openArtist(index){
-
-artistsView.classList.add("hidden");
-songsView.classList.remove("hidden");
-
-const artist=data.artists[index];
-
-songsView.innerHTML=`
-<div onclick="back()" style="padding:10px;color:#00ffd5;cursor:pointer">← חזרה</div>
-<h2 style="padding:10px">${artist.name}</h2>
-`;
-
-artist.songs.forEach(song=>{
-const el=document.createElement("div");
-el.className="song";
-el.innerText=song.title;
-
-el.onclick=()=>{
-player.src=song.youtube + "?autoplay=1";
+div.onclick=()=>{
+showSongs(a);
 };
 
-songsView.appendChild(el);
+artists.appendChild(div);
 });
 }
 
-/* 🔙 חזרה */
-function back(){
-songsView.classList.add("hidden");
-artistsView.classList.remove("hidden");
+/* =========================
+   SONG VIEW
+========================= */
+
+function showSongs(artist){
+artists.innerHTML="";
+
+artist.songs.forEach(s=>{
+let div=document.createElement("div");
+div.className="song";
+div.innerText=s.t;
+
+div.onclick=()=>{
+player.src=s.v+"?autoplay=1";
+
+DB.users[sessionUser].history.push(s.t);
+save();
+renderHistory();
+};
+
+artists.appendChild(div);
+});
 }
 
-/* 🔐 פאנל ניהול */
-function adminLogin(){
+/* =========================
+   HISTORY (MEMORY SYSTEM)
+========================= */
 
-const pass=prompt("סיסמה:");
-if(pass!==PASSWORD){
-alert("שגוי");
+function renderHistory(){
+history.innerHTML="";
+
+if(!DB.users[sessionUser])return;
+
+DB.users[sessionUser].history
+.slice(-5)
+.reverse()
+.forEach(h=>{
+let d=document.createElement("div");
+d.innerText="🎧 "+h;
+history.appendChild(d);
+});
+}
+
+/* =========================
+   ADMIN MODE
+========================= */
+
+function adminMode(){
+if(sessionUser!=="admin"){
+alert("אין הרשאה");
 return;
 }
 
-const name=prompt("שם אמן:");
+let name=prompt("אמן חדש:");
+let song=prompt("שיר:");
+let url=prompt("YouTube embed");
 
-let artist = data.artists.find(a=>a.name===name);
-
-if(!artist){
-artist = {name:name,songs:[]};
-data.artists.push(artist);
-}
-
-const title=prompt("שם שיר:");
-
-const youtube=prompt("YouTube embed link:");
-
-artist.songs.push({
-title,
-youtube
+DB.artists.push({
+name,
+songs:[{t:song,v:url}]
 });
 
-localStorage.setItem("aura",JSON.stringify(data));
-
+save();
 renderArtists();
 }
-
-renderArtists();
 
 </script>
 
