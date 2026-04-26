@@ -3,102 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AURA ULTRA</title>
+<title>AURA ULTRA GIT</title>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0a0a0f;
-color:white;
-}
-
-header{
-padding:18px;
-text-align:center;
-font-size:22px;
-background:#111;
-letter-spacing:2px;
-}
-
+body{margin:0;font-family:Arial;background:#0a0a0f;color:white}
+header{padding:15px;text-align:center;background:#111}
 .container{padding:15px}
-
-input,button{
-padding:10px;
-margin:5px;
-border-radius:8px;
-border:none;
-}
-
-button{
-cursor:pointer;
-background:#00ffd5;
-color:black;
-font-weight:bold;
-}
-
-.card{
-background:rgba(255,255,255,0.05);
-padding:12px;
-margin:10px 0;
-border-radius:10px;
-cursor:pointer;
-}
-
+input,button{padding:10px;margin:5px;border-radius:8px;border:none}
+button{background:#00ffd5;color:black;font-weight:bold;cursor:pointer}
+.card{padding:10px;margin:10px 0;background:#111;border-radius:10px;cursor:pointer}
 .card:hover{background:#222}
-
-.song{
-padding:10px;
-border-bottom:1px solid #222;
-cursor:pointer;
-}
-
+.song{padding:10px;border-bottom:1px solid #222;cursor:pointer}
 .song:hover{background:#111}
-
 .hidden{display:none}
-
-.player{
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-background:#000;
-padding:10px;
-}
-
-iframe{
-width:100%;
-height:180px;
-border:none;
-}
+.player{position:fixed;bottom:0;left:0;right:0;background:#000;padding:10px}
+iframe{width:100%;height:180px;border:none}
 </style>
 </head>
 
 <body>
 
-<header>🔐 AURA ULTRA SECURE</header>
+<header>🔐 AURA ULTRA GIT SYSTEM</header>
 
 <div class="container">
 
 <!-- LOGIN -->
 <div id="loginBox">
-<h3>כניסה למערכת</h3>
-<input id="user" placeholder="שם משתמש"><br>
-<input id="pass" type="password" placeholder="סיסמה"><br>
-<button onclick="login()">כניסה</button>
-<button onclick="register()">הרשמה</button>
+<h3>Login Admin/User</h3>
+<input id="user" placeholder="username">
+<input id="pass" type="password" placeholder="password">
+<button onclick="login()">Login</button>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
 
+<input id="search" placeholder="חיפוש..." oninput="search()">
+
 <h3>אמנים</h3>
 <div id="artists"></div>
 
+<h3>מומלץ בשבילך</h3>
+<div id="rec"></div>
+
 <h3>היסטוריה</h3>
 <div id="history"></div>
-
-<button onclick="adminMode()">ADMIN MODE</button>
 
 </div>
 
@@ -111,82 +60,78 @@ border:none;
 <script>
 
 /* =========================
-   🧠 LOCAL DATABASE
+   🔐 ADMIN SECURITY LAYER
 ========================= */
 
-let DB = JSON.parse(localStorage.getItem("aura_ultra_db")) || {
+const ADMIN_USER = "admin";
+const ADMIN_PASS_HASH = btoa("2004"); // obfuscation בסיסי
+
+let session = null;
+
+/* =========================
+   💾 LOCAL USER DB
+========================= */
+
+let DB = JSON.parse(localStorage.getItem("aura_git")) || {
 users:{},
+history:{},
+likes:{}
+};
+
+/* =========================
+   📦 CONTENT (GitHub JSON SIMULATION)
+========================= */
+
+let content = {
 artists:[
 {name:"Travis Scott",songs:[
 {t:"FE!N",v:"https://www.youtube.com/embed/U-l4Ya3ejko"}
+]},
+{name:"Drake",songs:[
+{t:"God's Plan",v:"https://www.youtube.com/embed/xpVfcZ0ZcFM"}
 ]}
 ]
 };
 
 /* =========================
-   🔐 SESSION
+   🔐 HASH SIMPLE OBFUSCATION
 ========================= */
 
-let sessionUser = null;
+function hash(s){return btoa(s+"AURA")}
 
 /* =========================
-   🔐 SIMPLE HASH (obfuscation)
-========================= */
-
-function hash(str){
-let h=0;
-for(let i=0;i<str.length;i++){
-h=(h<<5)-h+str.charCodeAt(i);
-h|=0;
-}
-return h;
-}
-
-/* =========================
-   REGISTER
-========================= */
-
-function register(){
-let u=user.value;
-let p=pass.value;
-
-if(!u||!p)return;
-
-DB.users[u]={
-pass:hash(p),
-history:[],
-likes:[]
-};
-
-save();
-alert("נרשם!");
-}
-
-/* =========================
-   LOGIN
+   LOGIN SYSTEM
 ========================= */
 
 function login(){
 let u=user.value;
 let p=pass.value;
 
-if(DB.users[u] && DB.users[u].pass===hash(p)){
-sessionUser=u;
-loginBox.classList.add("hidden");
-app.classList.remove("hidden");
-renderArtists();
-renderHistory();
-}else{
-alert("שגיאה");
+if(u===ADMIN_USER && hash(p)===ADMIN_PASS_HASH){
+session="admin";
+enterApp();
+return;
+}
+
+if(!DB.users[u]){
+DB.users[u]={pass:hash(p),history:[]};
+}
+
+if(DB.users[u].pass===hash(p)){
+session=u;
+enterApp();
 }
 }
 
 /* =========================
-   SAVE
+   ENTER APP
 ========================= */
 
-function save(){
-localStorage.setItem("aura_ultra_db",JSON.stringify(DB));
+function enterApp(){
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
+renderArtists();
+renderHistory();
 }
 
 /* =========================
@@ -196,56 +141,53 @@ localStorage.setItem("aura_ultra_db",JSON.stringify(DB));
 function renderArtists(){
 artists.innerHTML="";
 
-DB.artists.forEach(a=>{
-let div=document.createElement("div");
-div.className="card";
-div.innerHTML=a.name;
+content.artists.forEach(a=>{
+let d=document.createElement("div");
+d.className="card";
+d.innerText=a.name;
 
-div.onclick=()=>{
-showSongs(a);
-};
+d.onclick=()=>openArtist(a);
 
-artists.appendChild(div);
+artists.appendChild(d);
 });
 }
 
 /* =========================
-   SONG VIEW
+   OPEN ARTIST
 ========================= */
 
-function showSongs(artist){
+function openArtist(a){
 artists.innerHTML="";
 
-artist.songs.forEach(s=>{
-let div=document.createElement("div");
-div.className="song";
-div.innerText=s.t;
+a.songs.forEach(s=>{
+let d=document.createElement("div");
+d.className="song";
+d.innerText=s.t;
 
-div.onclick=()=>{
+d.onclick=()=>{
 player.src=s.v+"?autoplay=1";
 
-DB.users[sessionUser].history.push(s.t);
-save();
+if(session && session!=="admin"){
+DB.users[session].history.push(s.t);
+localStorage.setItem("aura_git",JSON.stringify(DB));
 renderHistory();
+}
 };
 
-artists.appendChild(div);
+artists.appendChild(d);
 });
 }
 
 /* =========================
-   HISTORY (MEMORY SYSTEM)
+   HISTORY
 ========================= */
 
 function renderHistory(){
 history.innerHTML="";
 
-if(!DB.users[sessionUser])return;
+if(!DB.users[session])return;
 
-DB.users[sessionUser].history
-.slice(-5)
-.reverse()
-.forEach(h=>{
+DB.users[session].history.slice(-7).reverse().forEach(h=>{
 let d=document.createElement("div");
 d.innerText="🎧 "+h;
 history.appendChild(d);
@@ -253,26 +195,22 @@ history.appendChild(d);
 }
 
 /* =========================
-   ADMIN MODE
+   SEARCH
 ========================= */
 
-function adminMode(){
-if(sessionUser!=="admin"){
-alert("אין הרשאה");
-return;
+function search(){
+let q=search.value.toLowerCase();
+artists.innerHTML="";
+
+content.artists.forEach(a=>{
+if(a.name.toLowerCase().includes(q)){
+let d=document.createElement("div");
+d.className="card";
+d.innerText=a.name;
+d.onclick=()=>openArtist(a);
+artists.appendChild(d);
 }
-
-let name=prompt("אמן חדש:");
-let song=prompt("שיר:");
-let url=prompt("YouTube embed");
-
-DB.artists.push({
-name,
-songs:[{t:song,v:url}]
 });
-
-save();
-renderArtists();
 }
 
 </script>
